@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard | SmartBus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root { --sidebar-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { min-height: 100vh; background: var(--sidebar-grad); color: white; position: fixed; }
+        .sidebar .nav-link { color: rgba(255, 255, 255, 0.8); padding: 1rem 1.5rem; border-radius: 8px; margin: 0.2rem 0; transition: 0.3s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: rgba(255, 255, 255, 0.2); color: white; }
+        .main-content { margin-left: 16.66667%; padding: 2rem; }
+        .stat-card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+        .status-badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .status-lost { background: #fff3cd; color: #856404; }
+        .status-found { background: #d4edda; color: #155724; }
+        .item-img-sm { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; }
+        #image-preview-container img { max-width: 100%; border-radius: 10px; border: 2px dashed #ddd; padding: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-3 shadow">
+                <div class="text-center mb-4">
+                    <i class="bi bi-bus-front display-4"></i>
+                    <h5 class="mt-2">SmartBus</h5>
+                    <small class="opacity-75">Staff Portal</small>
+                </div>
+                <div class="mb-4 px-3">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h6 class="mb-0" id="staff-name">Staff Member</h6>
+                            <small class="opacity-75">Online</small>
+                        </div>
+                    </div>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#"><i class="bi bi-search"></i> Lost & Found</a>
+                    <a class="nav-link" href="#"><i class="bi bi-ticket"></i> Reservations</a>
+                    <a class="nav-link" href="#"><i class="bi bi-exclamation-triangle"></i> Emergency</a>
+                    <hr>
+                    <a class="nav-link text-warning" href="index.html"><i class="bi bi-house"></i> Exit to Public Site</a>
+                    <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a>
+                </nav>
+            </div>
+
+            <div class="col-md-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold text-dark">📦 Lost & Found Management</h2>
+                    <button class="btn btn-primary shadow-sm" onclick="loadLostItems()">
+                        <i class="bi bi-arrow-clockwise"></i> Sync Data
+                    </button>
+                </div>
+
+                <div class="row g-4 mb-4 text-center">
+                    <div class="col-md-4">
+                        <div class="card stat-card p-3 bg-white">
+                            <h6 class="text-muted">Total Reports</h6>
+                            <h2 class="fw-bold text-primary" id="total-reports">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-3 bg-white">
+                            <h6 class="text-muted">Currently Lost</h6>
+                            <h2 class="fw-bold text-warning" id="items-lost">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-3 bg-white">
+                            <h6 class="text-muted">Recovered Items</h6>
+                            <h2 class="fw-bold text-success" id="items-found">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white py-3 border-0">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h5 class="mb-0 fw-bold">Recent Complaints</h5>
+                            </div>
+                            <div class="col-md-6 d-flex gap-2 justify-content-end">
+                                <input type="text" class="form-control form-control-sm w-50" id="search-input" placeholder="Search item...">
+                                <select class="form-select form-select-sm w-25" id="filter-status">
+                                    <option value="all">All</option>
+                                    <option value="Lost">Lost</option>
+                                    <option value="Found">Found</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="lost-items-table">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4">Item & Photo</th>
+                                        <th>Description</th>
+                                        <th>Bus Route</th>
+                                        <th>Contact Info</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lost-items-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="updateModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-camera-fill me-2"></i> Report Found Item</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="update-item-id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Item Name</label>
+                        <input type="text" class="form-control bg-light" id="update-item-name" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Capture/Upload Photo</label>
+                        <input type="file" class="form-control" id="found-item-image" accept="image/*" onchange="previewImage(event)">
+                        <div id="image-preview-container" class="mt-2 d-none">
+                            <img id="img-preview" src="#" alt="Found item preview">
+                            <p class="small text-muted mt-1">Preview of the found item</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Found Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="update-location" placeholder="e.g. Under seat 12, Bus AR-04" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Notes</label>
+                        <textarea class="form-control" id="update-notes" rows="2" placeholder="Condition of item..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success px-4" onclick="submitUpdate()">
+                        <i class="bi bi-check-lg"></i> Confirm Found
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check Auth
+        if (!localStorage.getItem('staffToken')) { window.location.href = 'staff-login.html'; }
+        document.getElementById('staff-name').textContent = localStorage.getItem('staffName') || 'Staff Member';
+
+        let allItems = [];
+
+        // LOAD DATA
+        async function loadLostItems() {
+            try {
+                // For Demo: If API fails, we use local mock data
+                const res = await fetch('/api/lost-items');
+                allItems = await res.json();
+            } catch (e) {
+                console.log("Using mock data for demonstration");
+                allItems = [
+                    {id: 101, item_name: "iPhone 13", description: "Black case, cracked screen", bus_route: "Hyd - Vijayawada", reporter_phone: "9876543210", reporter_email: "user@test.com", status: "Lost", created_at: new Date(), image_path: null},
+                    {id: 102, item_name: "Leather Wallet", description: "Brown leather, has ID cards", bus_route: "Hyd - Mumbai", reporter_phone: "9988776655", reporter_email: "jane@test.com", status: "Found", created_at: new Date(), image_path: "https://via.placeholder.com/150"}
+                ];
+            }
+            renderTable(allItems);
+            updateStats();
+        }
+
+        // RENDER TABLE
+        function renderTable(items) {
+            const tbody = document.getElementById('lost-items-body');
+            tbody.innerHTML = '';
+
+            items.forEach(item => {
+                const statusClass = item.status === 'Lost' ? 'status-lost' : 'status-found';
+                const actionBtn = item.status === 'Lost' 
+                    ? `<button class="btn btn-sm btn-outline-success" onclick="openUpdateModal(${item.id})"><i class="bi bi-camera"></i> Mark Found</button>`
+                    : `<span class="text-success small"><i class="bi bi-check-all"></i> Resolved</span>`;
+                
+                const imgHtml = item.image_path 
+                    ? `<img src="${item.image_path}" class="item-img-sm me-2 shadow-sm" onclick="window.open('${item.image_path}')">`
+                    : `<div class="bg-light item-img-sm d-inline-flex align-items-center justify-content-center me-2"><i class="bi bi-image text-muted"></i></div>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">${imgHtml} <strong>${item.item_name}</strong></div>
+                        </td>
+                        <td><small>${item.description}</small></td>
+                        <td><span class="badge bg-secondary opacity-75">${item.bus_route}</span></td>
+                        <td>
+                            <div class="small">${item.reporter_phone}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">${item.reporter_email}</div>
+                        </td>
+                        <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+                        <td>${actionBtn}</td>
+                    </tr>`;
+            });
+        }
+
+        // IMAGE PREVIEW LOGIC
+        function previewImage(event) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const output = document.getElementById('img-preview');
+                output.src = reader.result;
+                document.getElementById('image-preview-container').classList.remove('d-none');
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        }
+
+        // OPEN MODAL
+        function openUpdateModal(id) {
+            const item = allItems.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('update-item-id').value = item.id;
+            document.getElementById('update-item-name').value = item.item_name;
+            document.getElementById('found-item-image').value = '';
+            document.getElementById('image-preview-container').classList.add('d-none');
+            new bootstrap.Modal(document.getElementById('updateModal')).show();
+        }
+
+        // SUBMIT UPDATE (FormData allows file upload)
+        async function submitUpdate() {
+            const id = document.getElementById('update-item-id').value;
+            const location = document.getElementById('update-location').value;
+            const imageFile = document.getElementById('found-item-image').files[0];
+
+            if (!location) return alert("Found location is required!");
+
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('location', location);
+            formData.append('notes', document.getElementById('update-notes').value);
+            if (imageFile) formData.append('found_image', imageFile);
+
+            try {
+                // In a real app, this sends to your backend (Node.js/PHP)
+                const res = await fetch('/api/staff-update', { method: 'POST', body: formData });
+                const result = await res.json();
+                if(result.success) {
+                    alert("Item updated successfully!");
+                    bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
+                    loadLostItems();
+                }
+            } catch (err) {
+                // Mock success for local testing
+                alert("Confirmed! (Mock) Item marked as found and photo processed.");
+                bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('total-reports').textContent = allItems.length;
+            document.getElementById('items-lost').textContent = allItems.filter(i => i.status === 'Lost').length;
+            document.getElementById('items-found').textContent = allItems.filter(i => i.status === 'Found').length;
+        }
+
+        // Search/Filter
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            renderTable(allItems.filter(i => i.item_name.toLowerCase().includes(val)));
+        });
+
+        document.getElementById('filter-status').addEventListener('change', (e) => {
+            const s = e.target.value;
+            renderTable(s === 'all' ? allItems : allItems.filter(i => i.status === s));
+        });
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'staff-login.html';
+        }
+
+        window.onload = loadLostItems;
+    </script>
+</body>
+</html>

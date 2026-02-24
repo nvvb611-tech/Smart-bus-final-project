@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login | SmartBus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-section {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 100%;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+        }
+        .login-body {
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-section">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="bi bi-shield-lock display-4"></i>
+                <h3 class="mt-3 mb-0">Staff Portal</h3>
+                <p class="mb-0 opacity-75">SmartBus Management System</p>
+            </div>
+            <div class="login-body">
+                <form id="staff-login-form">
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="staff-email" placeholder="staff@smartbus.com" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="staff-password" placeholder="Enter password" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember-me">
+                        <label class="form-check-label" for="remember-me">Remember me</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </button>
+                    <div id="login-error" class="alert alert-danger mt-3 d-none"></div>
+                </form>
+                <div class="text-center mt-4">
+                    <a href="index.html" class="text-muted">
+                        <i class="bi bi-arrow-left"></i> Back to Home
+                    </a>
+                </div>
+                <div class="mt-4 p-3 bg-light rounded">
+                    <small class="text-muted">
+                        <strong>Demo Credentials:</strong><br>
+                        Email: staff@smartbus.com<br>
+                        Password: staff123
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- 1. SESSION SECURITY ---
+        // Checks if staff is logged in; if not, sends them back to login page
+        window.onload = () => {
+            const staffName = localStorage.getItem('staffName');
+            if (!staffName) {
+                // Uncomment the line below to enable login security
+                // window.location.href = 'staff-login.html';
+            } else {
+                document.getElementById('staff-name').innerText = staffName;
+            }
+            loadLostItems(); // Load dummy data on start
+        };
+
+        function logout() {
+            localStorage.removeItem('staffName');
+            localStorage.removeItem('staffToken');
+            window.location.href = 'staff-login.html';
+        }
+
+        // --- 2. DUMMY DATA ---
+        let lostItems = [
+            { id: 1, name: "iPhone 13", desc: "Black case, cracked screen", route: "Hyd to Mumbai", contact: "9876543210", status: "Lost", photo: null },
+            { id: 2, name: "Leather Wallet", desc: "Brown leather, contains ID", route: "Hyd to Vijayawada", contact: "8887776665", status: "Found", photo: "https://via.placeholder.com/50" }
+        ];
+
+        // --- 3. CORE FUNCTIONS ---
+        function loadLostItems() {
+            const tableBody = document.getElementById('lost-items-body');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+            const filterVal = document.getElementById('filter-status').value;
+            
+            tableBody.innerHTML = '';
+            let lostCount = 0;
+            let foundCount = 0;
+
+            lostItems.forEach(item => {
+                // Filtering Logic
+                if (filterVal !== 'all' && item.status !== filterVal) return;
+                if (searchVal && !item.name.toLowerCase().includes(searchVal)) return;
+
+                // Counter logic
+                if (item.status === 'Lost') lostCount++;
+                else foundCount++;
+
+                const row = `
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <img src="${item.photo || 'https://via.placeholder.com/50'}" class="item-img-sm me-3" alt="item">
+                                <strong>${item.name}</strong>
+                            </div>
+                        </td>
+                        <td>${item.desc}</td>
+                        <td><span class="badge bg-info text-dark">${item.route}</span></td>
+                        <td>${item.contact}</td>
+                        <td>
+                            <span class="status-badge ${item.status === 'Lost' ? 'status-lost' : 'status-found'}">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td>
+                            ${item.status === 'Lost' ? 
+                                `<button class="btn btn-sm btn-success" onclick="openUpdateModal(${item.id}, '${item.name}')">
+                                    <i class="bi bi-check-circle"></i> Mark Found
+                                 </button>` : 
+                                `<button class="btn btn-sm btn-outline-secondary" disabled>Resolved</button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+            // Update Statistics Cards
+            document.getElementById('total-reports').innerText = lostItems.length;
+            document.getElementById('items-lost').innerText = lostCount;
+            document.getElementById('items-found').innerText = foundCount;
+        }
+
+        // --- 4. MODAL & PHOTO UPLOAD LOGIC ---
+        const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+
+        function openUpdateModal(id, name) {
+            document.getElementById('update-item-id').value = id;
+            document.getElementById('update-item-name').value = name;
+            updateModal.show();
+        }
+
+        function saveFoundItem() {
+            const id = document.getElementById('update-item-id').value;
+            const fileInput = document.getElementById('found-image-input');
+            
+            // Find item in array and update it
+            const itemIndex = lostItems.findIndex(item => item.id == id);
+            if (itemIndex !== -1) {
+                lostItems[itemIndex].status = "Found";
+                
+                // Handle image preview (fake upload)
+                if (fileInput.files && fileInput.files[0]) {
+                    lostItems[itemIndex].photo = URL.createObjectURL(fileInput.files[0]);
+                } else {
+                    lostItems[itemIndex].photo = "https://img.icons8.com/color/48/checked-checkbox.png";
+                }
+
+                alert("Item marked as recovered successfully!");
+                updateModal.hide();
+                loadLostItems(); // Refresh table
+            }
+        }
+
+        // Listen for search/filter changes
+        document.getElementById('search-input').oninput = loadLostItems;
+        document.getElementById('filter-status').onchange = loadLostItems;
+
+    </script>
+</body>
+</html>

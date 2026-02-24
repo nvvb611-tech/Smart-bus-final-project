@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartBus | Intelligent Transit System</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        /* Global Styles */
+        :root { --primary-blue: #0d6efd; }
+        #map { height: 100%; width: 100%; }
+        .map-container { height: 500px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.1); }
+        
+        /* GPS Section */
+        .gps-container { display: flex; gap: 15px; }
+        .gps-sidebar { width: 320px; background: #f8f9fa; border-radius: 12px; padding: 15px; height: 500px; overflow-y: auto; }
+        .gps-main { flex: 1; position: relative; }
+        .bus-item { background: #fff; border-radius: 8px; padding: 10px; margin-bottom: 10px; cursor: pointer; border: 1px solid #dee2e6; transition: 0.3s; }
+        .bus-item:hover, .bus-item.active { background: #e9ecef; border-color: var(--primary-blue); }
+        .control-btn { padding: 8px 12px; border: none; border-radius: 6px; background: var(--primary-blue); color: #fff; margin: 2px; }
+        .gps-controls { position: absolute; bottom: 10px; left: 10px; background: #ffffffcc; padding: 6px; border-radius: 8px; z-index: 1000; }
+
+        /* Seat Map Styles */
+        .seat-map { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 300px; margin: 20px auto; padding: 15px; background: #f8f9fa; border-radius: 10px; }
+        .seat { width: 40px; height: 40px; border: 2px solid #dee2e6; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .8rem; transition: .2s; position: relative;}
+        .seat.available:hover { background: #e9ecef; border-color: var(--primary-blue); }
+        .seat.selected { background: var(--primary-blue) !important; color: #fff; border-color: var(--primary-blue); }
+        .seat.occupied { background: #adb5bd; cursor: not-allowed; opacity: .6; }
+        .seat.window { border-style: dashed; border-color: #6c757d; }
+        .gap { grid-column: 3; }
+        
+        .hero-section { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 60px 0; }
+        .feature-card { border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; border-radius: 15px; }
+        .feature-card:hover { transform: translateY(-5px); }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#home"><i class="bi bi-bus-front"></i> SmartBus</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="#home">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tracking">Live Tracking</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#reservation">Reservations</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#emergency">Emergency</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#lost-found">Lost & Found</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light btn-sm px-3" href="staff-login.html">
+                            <i class="bi bi-person-badge"></i> Staff Login
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section id="home" class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">Smart Bus Management System</h1>
+                    <p class="lead mb-4">Real-time tracking, easy booking, and passenger safety all in one place.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#tracking" class="btn btn-primary btn-lg">Track Bus</a>
+                        <a href="#reservation" class="btn btn-outline-light btn-lg">Book Seat</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="tracking" class="container my-5 pt-4">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">📍 Live Route Tracking</h2>
+            <p class="text-muted">Select a bus to see live location and proceed to booking</p>
+        </div>
+
+        <div class="gps-container">
+            <aside class="gps-sidebar">
+                <div class="sidebar-header"><h4>🗺️ Available Buses</h4></div>
+                <div class="buses-items" id="busList">
+                    <div class="bus-item" onclick="selectBus('vijayawada', this)"><h6>Hyd → Vijayawada</h6><small>Stops: Miyapur, Koti, LB Nagar...</small></div>
+                    <div class="bus-item" onclick="selectBus('mumbai', this)"><h6>Hyd → Mumbai</h6><small>Stops: Miyapur, BHEL, Solapur...</small></div>
+                    <div class="bus-item" onclick="selectBus('chennai', this)"><h6>Hyd → Chennai</h6><small>Stops: Koti, Nalgonda, Nellore...</small></div>
+                    <div class="bus-item" onclick="selectBus('delhi', this)"><h6>Hyd → Delhi</h6><small>Stops: Medchal, Nagpur, Bhopal...</small></div>
+                    <div class="bus-item" onclick="selectBus('bangalore', this)"><h6>Hyd → Bangalore</h6><small>Stops: Jadcherla, Kurnool, Anantapur...</small></div>
+                </div>
+            </aside>
+
+           <main class="gps-main">
+    <div id="map" class="map-container"></div>
+    <div class="gps-controls">
+        <button id="startBtn" onclick="startBusManually()" class="control-btn">▶️ Start Bus</button>
+        <button onclick="triggerEmergency()" style="background:red;color:white;border:none;border-radius:6px;padding:8px 12px;">🚨 SOS</button>
+    </div>
+</main>
+        </div>
+    </section>
+
+    <section id="reservation" class="container my-5 pt-4">
+        <h2 class="text-center mb-4 fw-bold">🎫 Smart Seat Reservation</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card p-4 shadow-sm border-0">
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <h5 class="mb-3">1. Selection & Preferences</h5>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Selected Bus</label>
+                                <input type="text" id="display-selected-bus" class="form-control" value="None (Select from map)" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Gender Preference</label>
+                                <select class="form-select" id="gender-pref">
+                                    <option value="No Preference">No Preference</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Seat Type</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="seattype" id="all-seats" checked onclick="renderSeats()">
+                                    <label class="btn btn-outline-secondary" for="all-seats">All</label>
+                                    <input type="radio" class="btn-check" name="seattype" id="window-only" onclick="renderSeats()">
+                                    <label class="btn btn-outline-secondary" for="window-only">Window</label>
+                                </div>
+                            </div>
+                            <div class="alert alert-info py-2 small">
+                                <strong>Note:</strong> Dashed borders indicate Window Seats.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-3 text-center">2. Select Your Seat</h5>
+                            <div class="seat-map" id="seat-container">
+                                </div>
+                            <div id="selection-result" class="text-center mt-3 fw-bold text-success"></div>
+                            <input type="hidden" id="selected-seat-num">
+                            <button type="button" class="btn btn-primary w-100 btn-lg mt-3" onclick="confirmSelection()">Select Seat</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="emergency" class="container my-5">
+        <div class="card bg-danger text-white border-0 shadow-lg p-5 text-center">
+            <h2 class="display-5 fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> SOS Emergency</h2>
+            <p class="lead">Immediate connection to police control room.</p>
+            <button class="btn btn-light btn-lg fw-bold px-5" onclick="triggerEmergency()">CALL POLICE NOW</button>
+        </div>
+    </section>
+
+    <section id="lost-found" class="container my-5 pt-4">
+        <h2 class="text-center mb-5 fw-bold">🔍 Lost & Found Portal</h2>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark fw-bold">📢 Report Lost Item</div>
+                    <div class="card-body">
+                        <form id="lost-form">
+                            <div class="mb-2"><input type="text" class="form-control" placeholder="Item Name" required></div>
+                            <div class="mb-2"><input type="text" class="form-control" placeholder="Description" required></div>
+                            <div class="mb-2"><input type="text" class="form-control" placeholder="Bus Number/Route" required></div>
+                            <div class="mb-2"><input type="tel" class="form-control" placeholder="Phone Number" required></div>
+                            <button type="submit" class="btn btn-dark w-100">Submit Report</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm bg-light text-center p-4">
+                    <div class="card-header bg-dark text-white fw-bold mb-3">👮 Staff Access</div>
+                    <i class="bi bi-shield-lock display-4 text-muted mb-3"></i>
+                    <p class="text-muted">Staff members can manage routes and reports through the secure portal.</p>
+                    <a href="staff-login.html" class="btn btn-dark w-100"><i class="bi bi-box-arrow-in-right"></i> Staff Login Portal</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white text-center py-4">
+        <p class="mb-0">© 2026 SmartBus Management System. All rights reserved.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    // 1. Setup Data
+    const busRoutes = {
+        vijayawada: { name: "Hyd to Vijayawada", stops: [{lat:17.385, lng:78.486, n:"Hyd Central"}, {lat:17.345, lng:78.552, n:"LB Nagar"}, {lat:16.506, lng:80.648, n:"Vijayawada"}] },
+        mumbai: { name: "Hyd to Mumbai", stops: [{lat:17.385, lng:78.486, n:"Hyd Central"}, {lat:17.443, lng:78.349, n:"Miyapur"}, {lat:19.076, lng:72.877, n:"Mumbai"}] }
+    };
+
+    let map, busMarker, routeLine, busInterval;
+    let currentRoute = null;
+    let index = 0;
+    let startTime = 0;
+    let alertedStops = new Set();
+
+    // 2. Voice Sync (Fixes the "No Sound" issue)
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+    }
+
+    // 3. The Start Button Logic (Fixes the "Not Working" issue)
+    function startBusManually() {
+        console.log("Button clicked!"); // Check your browser console (F12)
+        
+        if (!currentRoute) {
+            alert("⚠️ Step 1: Click a bus name in the left sidebar first!");
+            return;
+        }
+
+        // Logic to start the movement
+        speak("Journey started. Tracking is now live.");
+        
+        index = 0;
+        startTime = Date.now();
+        if (busInterval) clearInterval(busInterval);
+        
+        busInterval = setInterval(() => {
+            if (index >= currentRoute.stops.length - 1) {
+                speak("Destination reached.");
+                clearInterval(busInterval);
+                return;
+            }
+
+            const A = currentRoute.stops[index];
+            const B = currentRoute.stops[index + 1];
+            // Movement happens over 10 seconds for the demo
+            const progress = Math.min((Date.now() - startTime) / 10000, 1);
+            
+            const lat = A.lat + (B.lat - A.lat) * progress;
+            const lng = A.lng + (B.lng - A.lng) * progress;
+            
+            if (busMarker) busMarker.setLatLng([lat, lng]);
+
+            // Voice Alerts
+            if (progress >= 0.7 && !alertedStops.has(index + "_5m")) {
+                speak("Attention. We will reach " + B.n + " in 5 minutes.");
+                alertedStops.add(index + "_5m");
+            }
+
+            if (progress >= 1) {
+                index++;
+                startTime = Date.now();
+                speak("Now arriving at " + B.n);
+            }
+        }, 1000);
+    }
+
+    // 4. Sidebar Selection
+    function selectBus(key, element) {
+        // UI reset
+        document.querySelectorAll('.bus-item').forEach(i => i.classList.remove('active'));
+        element.classList.add('active');
+        
+        currentRoute = busRoutes[key];
+        document.getElementById('display-selected-bus').value = currentRoute.name;
+
+        // Map reset
+        if (routeLine) map.removeLayer(routeLine);
+        if (busMarker) map.removeLayer(busMarker);
+
+        routeLine = L.polyline(currentRoute.stops.map(s => [s.lat, s.lng]), {color: 'blue'}).addTo(map);
+        map.fitBounds(routeLine.getBounds());
+        
+        busMarker = L.marker([currentRoute.stops[0].lat, currentRoute.stops[0].lng], {
+            icon: L.icon({ iconUrl: 'https://img.icons8.com/emoji/48/bus-emoji.png', iconSize: [40, 40] })
+        }).addTo(map);
+
+        speak("Selected route to " + key);
+    }
+
+    function triggerEmergency() {
+        speak("Emergency alert. Authorities have been contacted.");
+        alert("🚨 SOS Sent!");
+    }
+
+    // 5. Initialization
+    window.onload = function() {
+        map = L.map('map').setView([17.385, 78.486], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        renderSeats();
+    };
+</script>
+</body>
+</html>
